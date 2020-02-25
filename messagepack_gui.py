@@ -11,21 +11,52 @@ from tkinter import ttk
 from tkinter import messagebox
 import msgpack
 import binascii
+import re
 
 class Frame(Tk.Frame):
-
     #ボタンクリック時動作
     def button_msgpack_depack_clicked(self):
+        global init_flag
+
         self.txt_box.delete('1.0', 'end')
-        packed_datas = text_2_bytes(self.msgpack_entry.get())
-        packed_data = int.from_bytes(packed_datas, byteorder = 'big')
-        unpacker = msgpack.unpackb(packed_datas, use_list=True, raw=False)
-        self.txt_box.insert(1.0,'Binary: ' + hex(packed_data) + '\r\n' + 'Unpack: ' + str(unpacker))
+        packed_datas = self.msgpack_entry.get()
+        if len(packed_datas) < 1:
+            self.f_msgpack_values = Tk.Frame(self)
+            void_label = Tk.Label(self.f_msgpack_values,text = ' ', width=99 )
+            void_label.pack(side = 'left')            
+        else :
+            packed_datas = re.sub(' ', '', packed_datas)    #文字列に半角スペースが入っていた場合除外
+            packed_datas = text_2_bytes(packed_datas)       #文字列からバイト列に変換
+            packed_data = int.from_bytes(packed_datas, byteorder = 'big')   #Bytesからint型に変換
+            unpacker = msgpack.unpackb(packed_datas, use_list=True, raw=False)
+            self.txt_box.insert(1.0,'Binary: ' + hex(packed_data) + '\r\n' + 'Unpack: ' + str(unpacker) + '\r\n' + 'List num: ' + str(len(unpacker)))
+
+            value_names_dict = {}
+            i = 0
+            for keys in unpacker:
+                value_names_dict[i] = keys 
+                i += 1
+                
+            i = 0
+            self.f_msgpack_values = Tk.Frame(self)
+            for keys in unpacker:
+                keys = value_names_dict[i]
+                self.label = Tk.Label(self.f_msgpack_values,text = keys)
+                self.label.pack(side = 'left')
+                self.value = Tk.Label(self.f_msgpack_values, text = str(unpacker[keys]), width = len(str(unpacker[keys])), anchor= 'w', relief = Tk.RIDGE, bd = 2)
+                self.value.pack(side = 'left')
+                i += 1
+            
+            void_label = Tk.Label(self.f_msgpack_values,text = ' ', width=99 )  #delete後に自動的に消去されないので空欄で埋める
+            void_label.pack(side = 'left')
+            init_flag = True
+    
+        self.f_msgpack_values.place(x=10, y=150)
 
     #ウィンドウ初期化
     def __init__(self, master = None):
         window_width = 500
-        window_height =150
+        window_height = 200
         Tk.Frame.__init__(self, master, height = window_height, width = window_width)
         self.master.title('MessagePack & Tk sample')
 
@@ -63,6 +94,7 @@ def text_odd_2_even(text_datas):
 
 if __name__ == '__main__':
 
+    init_flag = False
     #GUI展開
     f = Frame()
     f.pack()
