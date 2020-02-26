@@ -16,7 +16,7 @@ import re
 class Frame(Tk.Frame):
     #ボタンクリック時動作
     def button_msgpack_depack_clicked(self):
-        global init_flag
+        j = 0
 
         self.txt_box.delete('1.0', 'end')
         packed_datas = self.msgpack_entry.get()
@@ -38,12 +38,16 @@ class Frame(Tk.Frame):
                 i += 1
             i = 0
 
+            label_total_length = 0
+
             self.f_msgpack_values = Tk.Frame(self)
             for keys in unpacker:
                 keys = value_names_dict[i]
 
                 self.label = Tk.Label(self.f_msgpack_values,text = keys)    #ラベルを表示
                 self.label.pack(side = 'left')
+
+                label_total_length += len(keys)
 
                 if isinstance(unpacker[keys] ,list):    #変数がリスト型だった時、多次元配列かどうかを確認　※変則的なリストには未対応
                     depth = list_depth(unpacker[keys])  #リストの深さ
@@ -55,20 +59,38 @@ class Frame(Tk.Frame):
                     value_label_length = factors * 3 
                 else:
                     value_label_length = len(str(unpacker[keys]))
+
+                label_total_length += len(keys)
+
                 self.value = Tk.Label(self.f_msgpack_values, text = str(unpacker[keys]), width = value_label_length, anchor= 'w', relief = Tk.RIDGE, bd = 2)
                 self.value.pack(side = 'left')
                 i += 1
-                
+                print(str(label_total_length))
+                if label_total_length > 45:
+                    void_label = Tk.Label(self.f_msgpack_values,text = ' ', width=99 )
+                    void_label.pack(side = 'left')
+                    self.f_msgpack_values.place(x=10, y=150 + j*25)
+                    j += 1
+                    label_total_length = 0
+                    self.f_msgpack_values = Tk.Frame(self)
+
             void_label = Tk.Label(self.f_msgpack_values,text = ' ', width=99 )  #delete後に自動的に消去されないので空欄で埋める
             void_label.pack(side = 'left')
-            init_flag = True
-    
-        self.f_msgpack_values.place(x=10, y=150)
+            if j == 0 :
+                self.f_msgpack_values.place(x=10, y=150)
+            else:
+                self.f_msgpack_values.place(x=10, y=150 + j*25)
+
+            for i in range(10):
+                self.f_msgpack_values = Tk.Frame(self)
+                void_label = Tk.Label(self.f_msgpack_values,text = ' ', width=99 )  #delete後に自動的に消去されないので空欄で埋める
+                void_label.pack(side = 'left')
+                self.f_msgpack_values.place(x=10, y=150 + (j+1)*25 + i*25)
 
     #ウィンドウ初期化
     def __init__(self, master = None):
-        window_width = 700
-        window_height = 300
+        window_width = 550
+        window_height = 250
         Tk.Frame.__init__(self, master, height = window_height, width = window_width)
         self.master.title('MessagePack & Tk sample')
 
@@ -85,7 +107,7 @@ class Frame(Tk.Frame):
         f_pack = Tk.Frame(self)
         label = Tk.Label(f_pack,text = 'Bin')
         label.pack(side = 'left')
-        self.msgpack_entry = Tk.Entry(f_pack,width=96)
+        self.msgpack_entry = Tk.Entry(f_pack,width=70)
         self.msgpack_entry.pack(side = 'left')
         button_msgpack_depack = Tk.Button(f_pack, text = 'UnPack', width = 6, command = self.button_msgpack_depack_clicked)
         button_msgpack_depack.pack(side = 'left')
@@ -123,8 +145,6 @@ def count_length(l):
         return 1
 
 if __name__ == '__main__':
-
-    init_flag = False
     #GUI展開
     f = Frame()
     f.pack()
