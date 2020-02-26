@@ -20,33 +20,45 @@ class Frame(Tk.Frame):
 
         self.txt_box.delete('1.0', 'end')
         packed_datas = self.msgpack_entry.get()
-        if len(packed_datas) < 1:
+        if len(packed_datas) < 1:   #1byte未満の時はクリア処理のみ実行
             self.f_msgpack_values = Tk.Frame(self)
             void_label = Tk.Label(self.f_msgpack_values,text = ' ', width=99 )
             void_label.pack(side = 'left')            
-        else :
+        else :  
             packed_datas = re.sub(' ', '', packed_datas)    #文字列に半角スペースが入っていた場合除外
             packed_datas = text_2_bytes(packed_datas)       #文字列からバイト列に変換
             packed_data = int.from_bytes(packed_datas, byteorder = 'big')   #Bytesからint型に変換
             unpacker = msgpack.unpackb(packed_datas, use_list=True, raw=False)
-            self.txt_box.insert(1.0,'Binary: ' + hex(packed_data) + '\r\n' + 'Unpack: ' + str(unpacker) + '\r\n' + 'List num: ' + str(len(unpacker)))
+            self.txt_box.insert(1.0,'Binary: ' + hex(packed_data) + '\r\n' + 'Unpack: ' + str(unpacker)  + '\r\n' )
 
             value_names_dict = {}
             i = 0
             for keys in unpacker:
-                value_names_dict[i] = keys 
+                value_names_dict[i] = keys #変数名を格納
                 i += 1
-                
             i = 0
+
             self.f_msgpack_values = Tk.Frame(self)
             for keys in unpacker:
                 keys = value_names_dict[i]
-                self.label = Tk.Label(self.f_msgpack_values,text = keys)
+
+                self.label = Tk.Label(self.f_msgpack_values,text = keys)    #ラベルを表示
                 self.label.pack(side = 'left')
-                self.value = Tk.Label(self.f_msgpack_values, text = str(unpacker[keys]), width = len(str(unpacker[keys])), anchor= 'w', relief = Tk.RIDGE, bd = 2)
+
+                if isinstance(unpacker[keys] ,list):    #変数がリスト型だった時、多次元配列かどうかを確認　※変則的なリストには未対応
+                    depth = list_depth(unpacker[keys])  #リストの深さ
+                    if depth > 1:
+                        factors = count_length(unpacker[keys]) 
+                    else :
+                        factors = len(unpacker[keys])
+                    self.txt_box.insert(5.0,'list depth:' + str(depth) + ', factors' + str(factors) + ' ')
+                    value_label_length = factors * 3 
+                else:
+                    value_label_length = len(str(unpacker[keys]))
+                self.value = Tk.Label(self.f_msgpack_values, text = str(unpacker[keys]), width = value_label_length, anchor= 'w', relief = Tk.RIDGE, bd = 2)
                 self.value.pack(side = 'left')
                 i += 1
-            
+                
             void_label = Tk.Label(self.f_msgpack_values,text = ' ', width=99 )  #delete後に自動的に消去されないので空欄で埋める
             void_label.pack(side = 'left')
             init_flag = True
@@ -55,8 +67,8 @@ class Frame(Tk.Frame):
 
     #ウィンドウ初期化
     def __init__(self, master = None):
-        window_width = 500
-        window_height = 200
+        window_width = 700
+        window_height = 300
         Tk.Frame.__init__(self, master, height = window_height, width = window_width)
         self.master.title('MessagePack & Tk sample')
 
@@ -73,7 +85,7 @@ class Frame(Tk.Frame):
         f_pack = Tk.Frame(self)
         label = Tk.Label(f_pack,text = 'Bin')
         label.pack(side = 'left')
-        self.msgpack_entry = Tk.Entry(f_pack,width=66)
+        self.msgpack_entry = Tk.Entry(f_pack,width=96)
         self.msgpack_entry.pack(side = 'left')
         button_msgpack_depack = Tk.Button(f_pack, text = 'UnPack', width = 6, command = self.button_msgpack_depack_clicked)
         button_msgpack_depack.pack(side = 'left')
@@ -91,6 +103,24 @@ def text_odd_2_even(text_datas):
     if (len(text_datas) % 2) == 1 : 
         text_datas = '0' + text_datas
     return text_datas
+
+#リストの深さをカウントする関数
+def list_depth(some_value):
+    if isinstance(some_value,list): #リストの中がリストの時は再帰処理
+        depth = 1 + list_depth(some_value[0])
+    else:
+        depth = 0
+    return depth
+
+#多次元配列の要素をカウントする関数
+def count_length(l):
+    count = 0
+    if isinstance(l, list):
+        for v in l:
+            count += count_length(v)
+        return count
+    else:
+        return 1
 
 if __name__ == '__main__':
 
